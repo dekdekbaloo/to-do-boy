@@ -4,10 +4,11 @@
   "description": "Facebook messager chat bot for checklists and notifications.",
   "main": "index.js",
   "scripts": {
-    "build": "babel src -d build",
+    "build": "rm -rf build && babel src -d build",
     "start": "node ./index.js",
     "dev": "nodemon --exec babel-node ./src/app.js --ignore build/",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "npm run build"
   },
   "author": "Jessada Trirongkit <jessada.trirongkit@gmail.com>",
   "license": "ISC",
