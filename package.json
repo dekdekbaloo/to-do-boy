@@ -1,6 +1,9 @@
 {
   "name": "to-do-boy",
   "version": "1.0.0",
+  "engines": {
+    "node": "7.10.0"
+  },
   "description": "Facebook messager chat bot for checklists and notifications.",
   "main": "index.js",
   "scripts": {
