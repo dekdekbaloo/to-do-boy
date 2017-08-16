@@ -585,10 +585,6 @@ babel-types@^6.19.0, babel-types@^6.23.0, babel-types@^6.24.1, babel-types@^6.26
     lodash "^4.17.4"
     to-fast-properties "^1.0.3"
 
-babel@^6.23.0:
-  version "6.23.0"
-  resolved "https://registry.yarnpkg.com/babel/-/babel-6.23.0.tgz#d0d1e7d803e974765beea3232d4e153c0efb90f4"
-
 babylon@^6.17.0, babylon@^6.18.0:
   version "6.18.0"
   resolved "https://registry.yarnpkg.com/babylon/-/babylon-6.18.0.tgz#af2f3b88fa6f5c1e4c634d1a0f8eac4f55b395e3"
@@ -873,6 +869,10 @@ doctrine@^2.0.0:
   dependencies:
     esutils "^2.0.2"
     isarray "^1.0.0"
+
+dotenv@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/dotenv/-/dotenv-4.0.0.tgz#864ef1379aced55ce6f95debecdce179f7a0cd1d"
 
 duplexer@~0.1.1:
   version "0.1.1"
