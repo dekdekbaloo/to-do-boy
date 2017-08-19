@@ -3,23 +3,22 @@
   "version": "1.0.0",
   "description": "Facebook messager chat bot for checklists and notifications.",
   "scripts": {
-    "build": "rm -rf build && babel src -d build",
-    "postbuild": "bash ./scripts/packFunctions.sh",
-    "start": "node ./index.js",
-    "dev": "nodemon --exec babel-node ./src/index.js --ignore build/"
+    "build": "webpack -p",
+    "dev": "nodemon --exec babel-node scripts/runDevelopmentServer.js"
   },
   "author": "Jessada Trirongkit <jessada.trirongkit@gmail.com>",
   "license": "ISC",
   "dependencies": {
-    "dotenv": "^4.0.0",
     "express": "^4.15.4",
+    "firebase": "^4.2.0",
     "firebase-admin": "^5.2.1",
-    "firebase-functions": "^0.6.1",
+    "firebase-functions": "^0.6.2",
     "morgan": "^1.8.2"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",
     "babel-eslint": "^7.2.3",
+    "babel-loader": "^7.1.2",
     "babel-preset-es2015": "^6.24.1",
     "eslint": "^4.4.1",
     "eslint-config-standard": "^10.2.1",
@@ -27,6 +26,7 @@
     "eslint-plugin-node": "^5.1.1",
     "eslint-plugin-promise": "^3.5.0",
     "eslint-plugin-standard": "^3.0.1",
-    "nodemon": "^1.11.0"
+    "nodemon": "^1.11.0",
+    "webpack": "^3.5.5"
   }
 }
