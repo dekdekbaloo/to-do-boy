@@ -9,11 +9,13 @@
   "author": "Jessada Trirongkit <jessada.trirongkit@gmail.com>",
   "license": "ISC",
   "dependencies": {
+    "axios": "^0.16.2",
     "express": "^4.15.4",
     "firebase": "^4.2.0",
     "firebase-admin": "^5.2.1",
     "firebase-functions": "^0.6.2",
-    "morgan": "^1.8.2"
+    "morgan": "^1.8.2",
+    "querystring": "^0.2.0"
   },
   "devDependencies": {
     "babel-cli": "^6.26.0",

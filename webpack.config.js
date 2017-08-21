@@ -3,7 +3,7 @@ const path = require('path')
 module.exports = {
   entry: './src/index.js',
   output: {
-    path: path.resolve(__dirname, 'functions'),
+    path: path.resolve(__dirname, 'functions/build/'),
     filename: 'app.js',
     libraryTarget: 'commonjs2'
   },

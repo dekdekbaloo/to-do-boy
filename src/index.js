@@ -1,2 +1,7 @@
 import app from './app'
-export default app
+import { initializeFirebaseConfig } from './utils/firebaseConfig'
+
+export function createApp (config) {
+  initializeFirebaseConfig(config)
+  return app
+}

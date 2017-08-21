@@ -1,10 +1,9 @@
 import express from 'express'
+import messenger from './messenger'
 import morgan from 'morgan'
 
 const app = express()
 app.use(morgan('tiny'))
-app.get('/hello', (req, res) => {
-  res.send('hello!')
-})
+app.use(messenger)
 
 export default app
