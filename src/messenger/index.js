@@ -1,7 +1,8 @@
 import axios from 'axios'
 import express from 'express'
+import * as Log from './logger'
 import { getFirebaseConfig } from '../utils/firebaseConfig'
-
+import uniqid from 'uniqid'
 const router = express.Router()
 
 router.get('/webhook', (req, res) => {
@@ -17,15 +18,9 @@ router.get('/webhook', (req, res) => {
 
 router.post('/webhook', (req, res) => {
   const data = req.body
-
   // Make sure this is a page subscription
   if (data.object === 'page') {
-    // Iterate over each entry - there may be multiple if batched
     data.entry.forEach((entry) => {
-      // const pageID = entry.id
-      // const timeOfEvent = entry.time
-
-      // Iterate over each messaging event
       entry.messaging.forEach((event) => {
         if (event.message) {
           receivedMessage(event)
@@ -34,50 +29,52 @@ router.post('/webhook', (req, res) => {
         }
       })
     })
-
-    // Assume all went well.
-    //
-    // You must send back a 200, within 20 seconds, to let us know
-    // you've successfully received the callback. Otherwise, the request
-    // will time out and we will keep trying to resend.
     res.sendStatus(200)
   }
 })
-
+function firstEntity (nlp, name) {
+  return nlp && nlp.entities && nlp.entities[name] && nlp.entities[name][0]
+}
+const todoDueDatePendingUsers = { }
 function receivedMessage (event) {
-  // Putting a stub for now, we'll expand it in the following steps
-  const senderID = event.sender.id
-  const recipientID = event.recipient.id
-  const timeOfMessage = event.timestamp
-  const message = event.message
-
-  console.log('Received message for user %d and page %d at %d with message:',
-    senderID, recipientID, timeOfMessage)
-  console.log(JSON.stringify(message))
-
-  // const messageId = message.mid
-
+  Log.messageRecieved(event)
+  const { sender, message } = event
   const messageText = message.text
-  const messageAttachments = message.attachments
-
-  if (messageText) {
-    // If we receive a text message, check to see if it matches a keyword
-    // and send back the example. Otherwise, just echo the text we received.
-    switch (messageText) {
-      case 'generic':
-        sendGenericMessage(senderID)
-        break
-
-      default:
-        sendTextMessage(senderID, messageText)
+  const senderID = sender.id
+  const datetime = firstEntity(message.nlp, 'datetime')
+  if (todoDueDatePendingUsers[senderID]) {
+    if (datetime && datetime.confidence > 0.8) {
+      console.log('Received potential due date:', datetime.value)
+      setTodoDuedate()
     }
-  } else if (messageAttachments) {
-    sendTextMessage(senderID, 'Message with attachment received')
+    console.log('Clearing due date pending queue')
+    delete todoDueDatePendingUsers[senderID]
+  }
+  if (messageText) {
+    const [ topic, ...parameters ] = messageText.split(' ')
+    switch (topic) {
+      case 'add':
+        const id = uniqid()
+        addTodo({
+          id,
+          content: parameters.join(' ')
+        })
+        todoDueDatePendingUsers[senderID] = id
+        sendTextMessage(senderID, 'When do you want to have this finished?')
+        break
+      default:
+        sendTextMessage(senderID, 'I don\'t know how to react to that.')
+    }
   }
 }
 
-function sendGenericMessage (recipientId, messageText) {
-  // To be expanded in later sections
+function addTodo ({ id, content }) {
+  console.log('adding todo id: %s with content: %s',
+    id, content)
+}
+function setTodoDuedate ({ id, duedate }) {
+  console.log('setting todo id: %s with duedate: %s',
+    id, duedate)
 }
 
 function sendTextMessage (recipientId, messageText) {
@@ -99,10 +96,7 @@ function callSendAPI (messageData) {
       params: { access_token: getFirebaseConfig().fb.page_access_token }
     }
   ).then(res => {
-    const recipientId = res.data.recipient_id
-    const messageId = res.data.message_id
-    console.log('Successfully sent generic message with id %s to recipient %s',
-      messageId, recipientId)
+    Log.messageSent(res.data)
   }).catch(error => {
     console.error('Unable to send message.')
     console.error(error)
