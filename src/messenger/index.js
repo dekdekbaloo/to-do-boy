@@ -2,8 +2,10 @@ import axios from 'axios'
 import express from 'express'
 import * as Log from './logger'
 import { getFirebaseConfig } from '../utils/firebaseConfig'
-import uniqid from 'uniqid'
+import { createTodoApp } from '../todo'
+
 const router = express.Router()
+const todoApp = createTodoApp(sendTextMessage)
 
 router.get('/webhook', (req, res) => {
   if (req.query['hub.mode'] === 'subscribe' &&
@@ -32,49 +34,40 @@ router.post('/webhook', (req, res) => {
     res.sendStatus(200)
   }
 })
-function firstEntity (nlp, name) {
+function firstNLPEntity (nlp, name) {
   return nlp && nlp.entities && nlp.entities[name] && nlp.entities[name][0]
 }
-const todoDueDatePendingUsers = { }
 function receivedMessage (event) {
   Log.messageRecieved(event)
   const { sender, message } = event
   const messageText = message.text
   const senderID = sender.id
-  const datetime = firstEntity(message.nlp, 'datetime')
-  if (todoDueDatePendingUsers[senderID]) {
-    if (datetime && datetime.confidence > 0.8) {
-      console.log('Received potential due date:', datetime.value)
-      setTodoDuedate()
-    }
-    console.log('Clearing due date pending queue')
-    delete todoDueDatePendingUsers[senderID]
-  }
   if (messageText) {
     const [ topic, ...parameters ] = messageText.split(' ')
+
+    if (todoApp.isUserLastTodoDueDatePending(senderID)) {
+      const datetime = firstNLPEntity(message.nlp, 'datetime')
+      if (datetime && datetime.confidence > 0.8) {
+        todoApp.updateDuedateToPendingUser({
+          userId: senderID,
+          dueDate: datetime
+        })
+      } else {
+        sendTextMessage(senderID, 'I don\'t think that\'s the time you tried to tell me.')
+      }
+
+      return
+    }
+
     switch (topic) {
       case 'add':
-        const id = uniqid()
-        addTodo({
-          id,
-          content: parameters.join(' ')
-        })
-        todoDueDatePendingUsers[senderID] = id
-        sendTextMessage(senderID, 'When do you want to have this finished?')
+        todoApp.addTodo({ userId: senderID, title: parameters.join(' ') })
         break
       default:
+        console.warn('Recieved unknow command.')
         sendTextMessage(senderID, 'I don\'t know how to react to that.')
     }
   }
-}
-
-function addTodo ({ id, content }) {
-  console.log('adding todo id: %s with content: %s',
-    id, content)
-}
-function setTodoDuedate ({ id, duedate }) {
-  console.log('setting todo id: %s with duedate: %s',
-    id, duedate)
 }
 
 function sendTextMessage (recipientId, messageText) {
@@ -86,20 +79,23 @@ function sendTextMessage (recipientId, messageText) {
       text: messageText
     }
   }
-
-  callSendAPI(messageData)
+  return callSendAPI(messageData)
 }
 
 function callSendAPI (messageData) {
-  axios.post('https://graph.facebook.com/v2.6/me/messages',
-    messageData, {
-      params: { access_token: getFirebaseConfig().fb.page_access_token }
-    }
-  ).then(res => {
-    Log.messageSent(res.data)
-  }).catch(error => {
-    console.error('Unable to send message.')
-    console.error(error)
+  return new Promise((resolve, reject) => {
+    axios.post('https://graph.facebook.com/v2.6/me/messages',
+      messageData, {
+        params: { access_token: getFirebaseConfig().fb.page_access_token }
+      }
+    ).then(res => {
+      Log.messageSent(res.data)
+      resolve(res.data)
+    }).catch(error => {
+      console.error('Unable to send message.')
+      console.error(error)
+      reject(error)
+    })
   })
 }
 export default router
