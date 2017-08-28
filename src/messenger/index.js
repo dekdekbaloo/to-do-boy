@@ -2,10 +2,38 @@ import axios from 'axios'
 import express from 'express'
 import * as Log from './logger'
 import { getFirebaseConfig } from '../utils/firebaseConfig'
+import { createConversations } from '../conversation'
 import { createTodoApp } from '../todo'
+// const todoApp = createTodoApp(callSendAPI)
+const conversations = createConversations({
+  initialState: { state: '' },
+  scanner: (oldState, { message, nlp }) => {
+    if (nlp && nlp.datetime) {
+      if (oldState === 'duedatePending') {
+        return {
+          state: '',
+          action: 'updateTodo',
+          options: {
+            duedate: nlp.datetime
+          }
+        }
+      }
+    }
+    const [ command, ...args ] = message.split(' ')
+    switch (command) {
+      case 'add':
+        return {
+          state: 'duedatePending',
+          action: 'addTodo',
+          title: args.join(' ')
+        }
+      default:
+        return { state: 'unknown' }
+    }
+  }
+})
 
 const router = express.Router()
-const todoApp = createTodoApp(sendTextMessage)
 
 router.get('/webhook', (req, res) => {
   if (req.query['hub.mode'] === 'subscribe' &&
@@ -20,7 +48,6 @@ router.get('/webhook', (req, res) => {
 
 router.post('/webhook', (req, res) => {
   const data = req.body
-  // Make sure this is a page subscription
   if (data.object === 'page') {
     data.entry.forEach((entry) => {
       entry.messaging.forEach((event) => {
@@ -34,39 +61,21 @@ router.post('/webhook', (req, res) => {
     res.sendStatus(200)
   }
 })
+
 function firstNLPEntity (nlp, name) {
   return nlp && nlp.entities && nlp.entities[name] && nlp.entities[name][0]
 }
+
 function receivedMessage (event) {
   Log.messageRecieved(event)
   const { sender, message } = event
   const messageText = message.text
-  const senderID = sender.id
   if (messageText) {
-    const [ topic, ...parameters ] = messageText.split(' ')
-
-    if (todoApp.isUserLastTodoDueDatePending(senderID)) {
-      const datetime = firstNLPEntity(message.nlp, 'datetime')
-      if (datetime && datetime.confidence > 0.8) {
-        todoApp.updateDuedateToPendingUser({
-          userId: senderID,
-          dueDate: datetime
-        })
-      } else {
-        sendTextMessage(senderID, 'I don\'t think that\'s the time you tried to tell me.')
-      }
-
-      return
-    }
-
-    switch (topic) {
-      case 'add':
-        todoApp.addTodo({ userId: senderID, title: parameters.join(' ') })
-        break
-      default:
-        console.warn('Recieved unknow command.')
-        sendTextMessage(senderID, 'I don\'t know how to react to that.')
-    }
+    conversations.notify({
+      userId: sender.id,
+      message: messageText,
+      nlp: firstNLPEntity(messageText)
+    })
   }
 }
 
