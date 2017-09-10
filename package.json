@@ -4,7 +4,7 @@
   "description": "Facebook messager chat bot for checklists and notifications.",
   "scripts": {
     "build": "webpack -p",
-    "dev": "nodemon --exec babel-node scripts/runDevelopmentServer.js"
+    "dev": "nodemon --exec babel-node src/index.js"
   },
   "author": "Jessada Trirongkit <jessada.trirongkit@gmail.com>",
   "license": "ISC",
