@@ -2,7 +2,7 @@
   "extends": "standard",
   "parser": "babel-eslint",
   "overrides": [{
-    "files": [ "src/**/*.test.js" ],
+    "files": [ "src/**/*.test.js", "src/**/__mocks__/**/*.js" ],
     "env": {
       "jest": true
     }

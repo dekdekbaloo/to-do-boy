@@ -1,82 +1,91 @@
+import { createFirebaseApp } from '../firebase'
 import { createTodoApp } from './createTodoApp'
+import moment from 'moment'
 
-describe('To do app', () => {
-  describe('getUserAction', () => {
-    const todoApp = createTodoApp({
-      addTodo: jest.fn(), updateTitle: jest.fn()
-    })
-    test('returns add action for a new user without existing data', () => {
-      const action = todoApp.getUserAction(null, {
-        userId: '1234',
-        text: 'add todo'
-      })
-      expect(action).toEqual({
-        topic: 'todo:add',
-        userId: '1234',
-        title: 'todo'
-      })
-    })
-    test('returns update action for existing user with pending states', () => {
-      const titlePendingState = {
-        status: 'title:pending',
-        todoId: '4567'
-      }
-      const updateTitleAction = todoApp.getUserAction(titlePendingState, {
-        userId: '1234',
-        text: 'todo'
-      })
+jest.mock('../firebase/createFirebaseApp')
 
-      expect(updateTitleAction).toEqual({
-        topic: 'title:update',
-        todoId: '4567',
-        title: 'todo'
-      })
-      // TODO: Due date will depend on nlp.
-      // const dueDatePendingState = {
-      //   status: 'duedate:pending',
-      //   todoId: '4567'
-      // }
-      // const updateDueDateAction = todoApp.getUserAction(dueDatePendingState, {
-      //   userId: '1234',
-      //   text:
-      // })
-    })
+const todoApp = createTodoApp()
+
+describe('todoApp', () => {
+  afterEach(() => {
+    createFirebaseApp.__reset()
   })
-  describe('performAction', () => {
-    const todoApp = createTodoApp({
-      addTodo: jest.fn(), updateTitle: jest.fn()
-    })
-    test('returns title pending state when no title recieved', () => {
-      expect(todoApp.performAction({
-        topic: 'todo:add',
-        userId: '1234'
-      })).toEqual(expect.objectContaining({ status: 'title:pending' }))
-    })
-    test('returns success status when an action is successfully performed', () => {
-      expect(todoApp.performAction({
-        topic: 'todo:add',
-        userId: '1234',
+  describe('add', () => {
+    test('adds new todo when all option is defined', async () => {
+      const userId = '1234abc'
+      const duedate = moment().set({
+        year: 2013,
+        date: 13,
+        month: 5,
+        hour: 0,
+        minute: 0,
+        second: 0
+      })
+      await todoApp.add({
+        userId,
         title: 'todo',
-        duedate: 'today'
-      })).toEqual(expect.objectContaining({ status: 'success' }))
+        duedate
+      })
+      const mockPushId = createFirebaseApp.__getMockPushId()
+      expect(createFirebaseApp.__getMockData()).toEqual({
+        todo: {
+          [mockPushId]: {
+            id: mockPushId,
+            title: 'todo',
+            ownerId: userId,
+            duedate
+          }
+        },
+        user: {
+          [userId]: {
+            todos: {
+              [mockPushId]: true
+            }
+          }
+        }
+      })
+    })
+    test('safely adds new todo when only title option is defined', async () => {
+      await todoApp.add({
+        userId: '1234abc',
+        title: 'todo'
+      })
+    })
+    test('error when no title is defined', () => {
+      expect(() => todoApp.add({ userId: '1234' })).toThrow(new Error('Title is not defined.'))
     })
   })
-  describe('accept', () => {
-    const todoApp = createTodoApp({
-      addTodo: jest.fn(),
-      updateTitle: jest.fn(),
-      getUserState: jest.fn()
-        .mockImplementationOnce(() => null)
-        .mockImplementationOnce(() => ({
-          status: 'title:pending',
-          todoId: '4567'
-        }))
-    })
-    test('returns true when accepted', () => {
-      expect(todoApp.accept({
-        userId: '1234',
-        text: 'add todo'
-      })).toBe(true)
+  describe('remove', () => {
+    test('remove todo at specified id', async () => {
+      const userId = '1234abc'
+      await todoApp.add({
+        userId,
+        title: 'todo1'
+      })
+      const id1 = createFirebaseApp.__getMockPushId()
+      await todoApp.add({
+        userId,
+        title: 'todo2'
+      })
+      const id2 = createFirebaseApp.__getMockPushId()
+      await todoApp.remove({ id: id2 })
+      expect(createFirebaseApp.__getMockData()).toEqual({
+        todo: {
+          [id1]: {
+            id: id1,
+            title: 'todo1',
+            ownerId: userId,
+            duedate: undefined
+          }
+        },
+        user: {
+          [userId]: {
+            todos: {
+              [id1]: true
+            }
+          }
+        }
+      })
     })
   })
 })

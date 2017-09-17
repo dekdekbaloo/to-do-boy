@@ -1,0 +1,1 @@
+export { createFirebaseApp } from './createFirebaseApp'
